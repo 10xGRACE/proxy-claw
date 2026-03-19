@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Claude Code Proxy</title>
+<style>
+  :root {
+    --bg: #0d1117;
+    --surface: #161b22;
+    --border: #30363d;
+    --text: #e6edf3;
+    --text2: #8b949e;
+    --accent: #58a6ff;
+    --green: #3fb950;
+    --red: #f85149;
+    --amber: #d29922;
+    --radius: 8px;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.5;
+    padding: 20px;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  /* Header */
+  .header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border);
+  }
+  .header h1 {
+    font-size: 20px;
+    font-weight: 600;
+  }
+  .status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    color: var(--text2);
+  }
+  .status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--red);
+  }
+  .status-dot.online { background: var(--green); }
+  .btn-reset {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text2);
+    padding: 4px 12px;
+    border-radius: var(--radius);
+    font-size: 12px;
+    cursor: pointer;
+    transition: border-color 0.2s, color 0.2s;
+  }
+  .btn-reset:hover { border-color: var(--red); color: var(--red); }
+
+  /* Cards */
+  .cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+  }
+  .card-label {
+    font-size: 12px;
+    color: var(--text2);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+  }
+  .card-value {
+    font-size: 24px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+  .card-sub {
+    font-size: 12px;
+    color: var(--text2);
+    margin-top: 2px;
+  }
+  .card-value.green { color: var(--green); }
+  .card-value.red { color: var(--red); }
+  .card-value.amber { color: var(--amber); }
+
+  /* Section */
+  .section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    margin-bottom: 24px;
+    overflow: hidden;
+  }
+  .section-title {
+    font-size: 14px;
+    font-weight: 600;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    color: var(--text2);
+  }
+
+  /* Table */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+  }
+  th {
+    text-align: left;
+    padding: 8px 12px;
+    font-weight: 500;
+    color: var(--text2);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    background: var(--surface);
+  }
+  td {
+    padding: 6px 12px;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+  }
+  tr:last-child td { border-bottom: none; }
+  .log-wrap {
+    max-height: 400px;
+    overflow-y: auto;
+  }
+
+  /* Status badges */
+  .badge {
+    display: inline-block;
+    padding: 1px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 500;
+  }
+  .badge.s2 { background: rgba(63,185,80,0.15); color: var(--green); }
+  .badge.s4 { background: rgba(210,153,34,0.15); color: var(--amber); }
+  .badge.s5 { background: rgba(248,81,73,0.15); color: var(--red); }
+
+  /* Empty state */
+  .empty {
+    padding: 32px;
+    text-align: center;
+    color: var(--text2);
+    font-size: 14px;
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>Claude Code Proxy</h1>
+  <div class="status">
+    <button class="btn-reset" id="resetBtn" onclick="resetStats()">Clear Logs</button>
+    <div class="status-dot" id="statusDot"></div>
+    <span id="statusText">Connecting…</span>
+  </div>
+</div>
+
+<div class="cards">
+  <div class="card">
+    <div class="card-label">Uptime</div>
+    <div class="card-value" id="uptime">—</div>
+  </div>
+  <div class="card">
+    <div class="card-label">Requests</div>
+    <div class="card-value" id="totalReqs">0</div>
+    <div class="card-sub" id="totalBytes">0 B</div>
+  </div>
+  <div class="card">
+    <div class="card-label">Active Streams</div>
+    <div class="card-value" id="activeStreams">0</div>
+  </div>
+  <div class="card">
+    <div class="card-label">Error Rate</div>
+    <div class="card-value" id="errorRate">0%</div>
+    <div class="card-sub" id="errorCount">0 failed</div>
+  </div>
+  <div class="card">
+    <div class="card-label">Token Status</div>
+    <div class="card-value" id="tokenStatus">—</div>
+    <div class="card-sub" id="tokenExpiry">—</div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-title">Request Log</div>
+  <div class="log-wrap" id="logWrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Time</th>
+          <th>Method</th>
+          <th>Path</th>
+          <th>Client</th>
+          <th>Status</th>
+          <th>Duration</th>
+          <th>Size</th>
+        </tr>
+      </thead>
+      <tbody id="logBody"></tbody>
+    </table>
+    <div class="empty" id="logEmpty">No requests yet</div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-title">Clients</div>
+  <table>
+    <thead>
+      <tr>
+        <th>IP Address</th>
+        <th>Requests</th>
+        <th>Data</th>
+        <th>First Seen</th>
+        <th>Last Seen</th>
+      </tr>
+    </thead>
+    <tbody id="clientsBody"></tbody>
+  </table>
+  <div class="empty" id="clientsEmpty">No clients yet</div>
+</div>
+
+<script>
+(function() {
+  const $ = id => document.getElementById(id);
+
+  // ── Formatters ────────────────────────────────────
+
+  function fmtUptime(s) {
+    if (s < 60) return s + 's';
+    if (s < 3600) return Math.floor(s/60) + 'm ' + (s%60) + 's';
+    const h = Math.floor(s/3600);
+    const m = Math.floor((s%3600)/60);
+    return h + 'h ' + m + 'm';
+  }
+
+  function fmtBytes(n) {
+    if (n < 1024) return n + ' B';
+    if (n < 1048576) return (n/1024).toFixed(1) + ' KB';
+    if (n < 1073741824) return (n/1048576).toFixed(1) + ' MB';
+    return (n/1073741824).toFixed(1) + ' GB';
+  }
+
+  function fmtTime(ts) {
+    const d = new Date(ts * 1000);
+    return d.toLocaleTimeString('en-GB', {hour12: false});
+  }
+
+  function fmtAgo(ts) {
+    const s = Math.floor(Date.now()/1000 - ts);
+    if (s < 5) return 'just now';
+    if (s < 60) return s + 's ago';
+    if (s < 3600) return Math.floor(s/60) + 'm ago';
+    if (s < 86400) return Math.floor(s/3600) + 'h ago';
+    return Math.floor(s/86400) + 'd ago';
+  }
+
+  function fmtDuration(ms) {
+    if (ms < 1000) return Math.round(ms) + 'ms';
+    return (ms/1000).toFixed(1) + 's';
+  }
+
+  function statusBadge(code) {
+    const cls = code < 300 ? 's2' : code < 500 ? 's4' : 's5';
+    return '<span class="badge ' + cls + '">' + code + '</span>';
+  }
+
+  // ── Render ────────────────────────────────────────
+
+  function renderStats(s) {
+    $('uptime').textContent = fmtUptime(s.uptime);
+    $('totalReqs').textContent = s.total;
+    $('totalBytes').textContent = fmtBytes(s.bytes_down);
+    $('activeStreams').textContent = s.active;
+
+    const rate = s.total > 0 ? ((s.fail / s.total) * 100).toFixed(1) : '0';
+    const el = $('errorRate');
+    el.textContent = rate + '%';
+    el.className = 'card-value' + (s.fail > 0 ? ' red' : ' green');
+    $('errorCount').textContent = s.fail + ' failed';
+
+    const tEl = $('tokenStatus');
+    const tSub = $('tokenExpiry');
+    if (s.token_valid) {
+      const secsLeft = Math.max(0, Math.floor(s.token_expires/1000 - Date.now()/1000));
+      tEl.textContent = 'Valid';
+      tEl.className = 'card-value green';
+      tSub.textContent = 'Expires in ' + fmtUptime(secsLeft);
+    } else {
+      tEl.textContent = 'Expired';
+      tEl.className = 'card-value red';
+      tSub.textContent = 'Needs refresh';
+    }
+
+    renderClients(s.clients);
+
+    // Render initial log entries
+    if (s.log && s.log.length > 0) {
+      $('logEmpty').style.display = 'none';
+      s.log.forEach(e => addLogRow(e, false));
+    }
+  }
+
+  function addLogRow(e, prepend) {
+    $('logEmpty').style.display = 'none';
+    const body = $('logBody');
+    const tr = document.createElement('tr');
+    tr.innerHTML =
+      '<td>' + fmtTime(e.ts) + '</td>' +
+      '<td>' + e.method + '</td>' +
+      '<td>' + truncPath(e.path) + '</td>' +
+      '<td>' + e.client + '</td>' +
+      '<td>' + statusBadge(e.status) + '</td>' +
+      '<td>' + fmtDuration(e.ms) + '</td>' +
+      '<td>' + fmtBytes(e.bytes) + '</td>';
+
+    if (prepend && body.firstChild) {
+      body.insertBefore(tr, body.firstChild);
+    } else {
+      body.appendChild(tr);
+    }
+
+    // Keep max 50 rows
+    while (body.children.length > 50) {
+      body.removeChild(body.lastChild);
+    }
+
+    // Auto-scroll to top on new entry
+    if (prepend) {
+      $('logWrap').scrollTop = 0;
+    }
+  }
+
+  function truncPath(p) {
+    return p.length > 40 ? p.substring(0, 37) + '…' : p;
+  }
+
+  function renderClients(clients) {
+    const body = $('clientsBody');
+    const empty = $('clientsEmpty');
+    const keys = Object.keys(clients || {});
+    if (keys.length === 0) {
+      empty.style.display = '';
+      body.innerHTML = '';
+      return;
+    }
+    empty.style.display = 'none';
+    // Sort by request count desc
+    keys.sort((a, b) => clients[b].reqs - clients[a].reqs);
+    body.innerHTML = keys.map(ip => {
+      const c = clients[ip];
+      return '<tr>' +
+        '<td>' + ip + '</td>' +
+        '<td>' + c.reqs + '</td>' +
+        '<td>' + fmtBytes(c.bytes) + '</td>' +
+        '<td>' + fmtAgo(c.first) + '</td>' +
+        '<td>' + fmtAgo(c.last) + '</td>' +
+        '</tr>';
+    }).join('');
+  }
+
+  // ── SSE ───────────────────────────────────────────
+
+  let reconnectAttempt = 0;
+
+  function connect() {
+    const es = new EventSource('/dashboard/events');
+
+    es.addEventListener('stats', function(e) {
+      renderStats(JSON.parse(e.data));
+    });
+
+    es.addEventListener('request', function(e) {
+      addLogRow(JSON.parse(e.data), true);
+    });
+
+    es.onopen = function() {
+      reconnectAttempt = 0;
+      $('statusDot').classList.add('online');
+      $('statusText').textContent = 'Connected';
+    };
+
+    es.onerror = function() {
+      $('statusDot').classList.remove('online');
+      $('statusText').textContent = 'Reconnecting…';
+      es.close();
+      // Exponential backoff: 1s, 2s, 4s, 8s, max 30s
+      const delay = Math.min(30000, 1000 * Math.pow(2, reconnectAttempt));
+      reconnectAttempt++;
+      setTimeout(connect, delay);
+    };
+  }
+
+  window.resetStats = function() {
+    fetch('/dashboard/reset', {method: 'POST'})
+      .then(function() {
+        $('logBody').innerHTML = '';
+        $('logEmpty').style.display = '';
+        $('clientsBody').innerHTML = '';
+        $('clientsEmpty').style.display = '';
+      })
+      .catch(function() {});
+  };
+
+  connect();
+
+  // Refresh relative times every 30s
+  setInterval(function() {
+    fetch('/dashboard/stats')
+      .then(r => r.json())
+      .then(s => {
+        renderClients(s.clients);
+        $('uptime').textContent = fmtUptime(s.uptime);
+      })
+      .catch(() => {});
+  }, 30000);
+})();
+</script>
+
+</body>
+</html>

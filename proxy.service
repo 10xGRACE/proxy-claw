@@ -1,0 +1,14 @@
+[Unit]
+Description=Claude Code Proxy
+After=network-online.target tailscaled.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 /home/grace/proxy/server.py --port 9191 --secret CHANGE_ME
+Restart=on-failure
+RestartSec=5
+WorkingDirectory=/home/grace/proxy
+
+[Install]
+WantedBy=default.target
