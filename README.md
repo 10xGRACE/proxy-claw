@@ -38,14 +38,15 @@ docker build -t proxy-claw .
 docker run -d \
   --name proxy-claw \
   -p 9191:9191 \
-  -e MINIO_ENDPOINT=host.docker.internal:9000 \
+  -e MINIO_ENDPOINT=host.containers.internal:9000 \
   -e MINIO_ACCESS_KEY=minioadmin \
   -e MINIO_SECRET_KEY=minioadmin \
   -v ~/.claude:/root/.claude:ro \
   proxy-claw --port 9191 --secret YOUR_SECRET
 ```
 
-> On Linux, use `--network host` or the actual host IP instead of `host.docker.internal`.
+> On Docker (not Podman), use `host.docker.internal` instead of `host.containers.internal`.
+> On Linux without Podman/Docker Desktop, use `--network host` or the actual host IP.
 
 #### Without Docker
 
@@ -120,6 +121,7 @@ Created automatically on startup:
 
 ```bash
 docker run -d \
+  --name proxy-claw \
   -p 9191:9191 \
   -e MINIO_ENDPOINT=host.containers.internal:9000 \
   -e MINIO_ACCESS_KEY=minioadmin \
