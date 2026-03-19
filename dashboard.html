@@ -497,18 +497,7 @@ claude</div>
           <span class="section-title">MinIO Connection</span>
         </div>
         <div style="padding:16px;font-size:13px;color:var(--text2);line-height:1.8">
-          <p>MinIO is configured via environment variables on the proxy container:</p>
-          <div class="code-block" style="margin:8px 0">MINIO_ENDPOINT=minio:9000
-MINIO_ACCESS_KEY=minioadmin
-MINIO_SECRET_KEY=minioadmin
-MINIO_SECURE=false</div>
-          <p style="margin-top:8px">MinIO Console is available at <strong>http://&lt;minio-host&gt;:9001</strong></p>
-          <p>Buckets used:</p>
-          <ul style="margin-left:20px;margin-top:4px">
-            <li><strong>proxy-logs</strong> — Request/response storage (organized by date)</li>
-            <li><strong>proxy-keys</strong> — API key management</li>
-            <li><strong>proxy-config</strong> — Configuration storage</li>
-          </ul>
+          <div id="storageConnectionInfo">Loading…</div>
         </div>
       </div>
     </div>
@@ -927,6 +916,7 @@ MINIO_SECURE=false</div>
         $('storAvail').textContent = 'Offline';
         $('storAvail').className = 'card-value red';
         $('storageBuckets').innerHTML = '';
+        $('storageConnectionInfo').textContent = 'MinIO is not connected.';
         return;
       }
       $('storAvail').textContent = data.available ? 'Online' : 'Offline';
@@ -941,9 +931,26 @@ MINIO_SECURE=false</div>
           '</div>';
       }
       $('storageBuckets').innerHTML = html;
+
+      // Connection info
+      const endpoint = data.endpoint || 'unknown';
+      const protocol = data.secure ? 'https' : 'http';
+      const host = endpoint.split(':')[0];
+      const consolePort = '9001';
+      const consoleUrl = protocol + '://' + host + ':' + consolePort;
+      $('storageConnectionInfo').innerHTML =
+        '<p><strong>Endpoint:</strong> ' + esc(protocol + '://' + endpoint) + '</p>' +
+        '<p><strong>Console:</strong> <a href="' + esc(consoleUrl) + '" target="_blank" style="color:var(--accent)">' + esc(consoleUrl) + '</a></p>' +
+        '<p style="margin-top:8px">Buckets used:</p>' +
+        '<ul style="margin-left:20px;margin-top:4px">' +
+          '<li><strong>proxy-logs</strong> — Request/response storage (organized by date)</li>' +
+          '<li><strong>proxy-keys</strong> — API key management</li>' +
+          '<li><strong>proxy-config</strong> — Configuration storage</li>' +
+        '</ul>';
     }).catch(e => {
       $('storAvail').textContent = 'Error';
       $('storAvail').className = 'card-value red';
+      $('storageConnectionInfo').textContent = 'Failed to fetch storage info.';
     });
   };
 

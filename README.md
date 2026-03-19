@@ -121,7 +121,7 @@ Created automatically on startup:
 ```bash
 docker run -d \
   -p 9191:9191 \
-  -e MINIO_ENDPOINT=your-minio:9000 \
+  -e MINIO_ENDPOINT=host.containers.internal:9000 \
   -e MINIO_ACCESS_KEY=minioadmin \
   -e MINIO_SECRET_KEY=minioadmin \
   -v ~/.claude:/root/.claude:ro \

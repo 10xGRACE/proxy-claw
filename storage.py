@@ -331,7 +331,12 @@ class StorageClient:
         if not self._client:
             return {"available": False}
 
-        stats = {"available": True, "buckets": {}}
+        stats = {
+            "available": True,
+            "endpoint": MINIO_ENDPOINT,
+            "secure": MINIO_SECURE,
+            "buckets": {},
+        }
         for bucket in (BUCKET_LOGS, BUCKET_KEYS, BUCKET_CONFIG):
             total_size = 0
             total_objects = 0
