@@ -1,0 +1,13 @@
+__pycache__/
+*.py[cod]
+.env
+.venv
+venv/
+.git/
+.gitignore
+*.md
+*.log
+minio-data/
+.idea/
+.vscode/
+proxy.service

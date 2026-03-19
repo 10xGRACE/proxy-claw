@@ -13,10 +13,14 @@ from aiohttp import web
 from core import ProxyHandler, TokenManager
 from middleware import auth_middleware, body_limit_middleware, rate_limit_middleware, security_middleware
 from stats import StatsCollector
+from storage import StorageClient
 
 DASHBOARD_HTML = Path(__file__).parent / "dashboard.html"
 
 log = logging.getLogger("proxy")
+
+
+# ── Dashboard & Health ─────────────────────────────────────
 
 
 async def handle_dashboard(_: web.Request) -> web.Response:
@@ -26,18 +30,23 @@ async def handle_dashboard(_: web.Request) -> web.Response:
 async def handle_health(request: web.Request) -> web.Response:
     token_mgr: TokenManager = request.app["token_mgr"]
     stats: StatsCollector = request.app["stats"]
+    storage: StorageClient = request.app["storage"]
     exp = token_mgr.expires_at()
     import time
     return web.json_response({
         "status": "ok" if time.time() * 1000 < exp else "token_expired",
         "uptime": round(time.time() - stats.start_time),
+        "storage": storage.available,
     })
 
 
 async def handle_stats(request: web.Request) -> web.Response:
     stats: StatsCollector = request.app["stats"]
     token_mgr: TokenManager = request.app["token_mgr"]
-    return web.json_response(stats.snapshot(token_mgr.expires_at()))
+    storage: StorageClient = request.app["storage"]
+    snap = stats.snapshot(token_mgr.expires_at())
+    snap["storage"] = storage.get_storage_stats()
+    return web.json_response(snap)
 
 
 async def handle_reset(request: web.Request) -> web.Response:
@@ -76,6 +85,100 @@ async def handle_events(request: web.Request) -> web.StreamResponse:
     return resp
 
 
+# ── API Key Management ────────────────────────────────────
+
+
+async def handle_keys_list(request: web.Request) -> web.Response:
+    storage: StorageClient = request.app["storage"]
+    if not storage.available:
+        return web.json_response({"error": "storage not available"}, status=503)
+    keys = storage.list_api_keys()
+    return web.json_response({"keys": keys})
+
+
+async def handle_keys_create(request: web.Request) -> web.Response:
+    storage: StorageClient = request.app["storage"]
+    if not storage.available:
+        return web.json_response({"error": "storage not available"}, status=503)
+
+    try:
+        data = await request.json()
+    except Exception:
+        return web.json_response({"error": "invalid JSON body"}, status=400)
+
+    name = data.get("name", "").strip()
+    if not name:
+        return web.json_response({"error": "name is required"}, status=400)
+
+    key_data = storage.create_api_key(name)
+    return web.json_response({"key": key_data}, status=201)
+
+
+async def handle_keys_toggle(request: web.Request) -> web.Response:
+    storage: StorageClient = request.app["storage"]
+    if not storage.available:
+        return web.json_response({"error": "storage not available"}, status=503)
+
+    key_id = request.match_info["key_id"]
+    try:
+        data = await request.json()
+    except Exception:
+        return web.json_response({"error": "invalid JSON body"}, status=400)
+
+    active = data.get("active", True)
+    result = storage.toggle_api_key(key_id, active)
+    if not result:
+        return web.json_response({"error": "key not found"}, status=404)
+    return web.json_response({"key": result})
+
+
+async def handle_keys_delete(request: web.Request) -> web.Response:
+    storage: StorageClient = request.app["storage"]
+    if not storage.available:
+        return web.json_response({"error": "storage not available"}, status=503)
+
+    key_id = request.match_info["key_id"]
+    if storage.delete_api_key(key_id):
+        return web.json_response({"status": "deleted"})
+    return web.json_response({"error": "key not found"}, status=404)
+
+
+# ── Request Log Viewer ────────────────────────────────────
+
+
+async def handle_logs_list(request: web.Request) -> web.Response:
+    storage: StorageClient = request.app["storage"]
+    if not storage.available:
+        return web.json_response({"error": "storage not available"}, status=503)
+
+    date = request.query.get("date")
+    limit = int(request.query.get("limit", "100"))
+    logs = storage.list_request_logs(limit=limit, date=date)
+    return web.json_response({"logs": logs})
+
+
+async def handle_logs_detail(request: web.Request) -> web.Response:
+    storage: StorageClient = request.app["storage"]
+    if not storage.available:
+        return web.json_response({"error": "storage not available"}, status=503)
+
+    request_id = request.match_info["request_id"]
+    data = storage.get_request_log(request_id)
+    if not data:
+        return web.json_response({"error": "not found"}, status=404)
+    return web.json_response(data)
+
+
+async def handle_storage_stats(request: web.Request) -> web.Response:
+    storage: StorageClient = request.app["storage"]
+    if not storage.available:
+        return web.json_response({"error": "storage not available"}, status=503)
+    return web.json_response(storage.get_storage_stats())
+
+
+# ── App Lifecycle ──────────────────────────────────────────
+
+
 async def on_startup(app: web.Application):
     connector = aiohttp.TCPConnector(
         limit=50,
@@ -86,9 +189,13 @@ async def on_startup(app: web.Application):
     session = aiohttp.ClientSession(connector=connector, auto_decompress=False)
     app["session"] = session
 
+    # Initialize MinIO storage
+    storage: StorageClient = app["storage"]
+    await storage.init()
+
     stats: StatsCollector = app["stats"]
     token_mgr = TokenManager(session, stats)
-    proxy = ProxyHandler(session, token_mgr, stats)
+    proxy = ProxyHandler(session, token_mgr, stats, storage)
 
     app["token_mgr"] = token_mgr
     app["proxy"] = proxy
@@ -106,21 +213,39 @@ async def on_shutdown(app: web.Application):
 
 def build_app(port: int, secret: str | None, max_body: int) -> web.Application:
     stats = StatsCollector()
+    storage = StorageClient()
 
     app = web.Application(middlewares=[
         security_middleware,
         body_limit_middleware(max_body),
         rate_limit_middleware(rate=2.0, burst=10),
-        auth_middleware(secret),
+        auth_middleware(secret, storage),
     ])
 
     app["stats"] = stats
+    app["storage"] = storage
 
+    # Dashboard
     app.router.add_get("/dashboard", handle_dashboard)
     app.router.add_get("/dashboard/stats", handle_stats)
     app.router.add_get("/dashboard/events", handle_events)
-    app.router.add_get("/health", handle_health)
     app.router.add_post("/dashboard/reset", handle_reset)
+
+    # Health
+    app.router.add_get("/health", handle_health)
+
+    # API Key management
+    app.router.add_get("/dashboard/api/keys", handle_keys_list)
+    app.router.add_post("/dashboard/api/keys", handle_keys_create)
+    app.router.add_put("/dashboard/api/keys/{key_id}", handle_keys_toggle)
+    app.router.add_delete("/dashboard/api/keys/{key_id}", handle_keys_delete)
+
+    # Request log viewer
+    app.router.add_get("/dashboard/api/logs", handle_logs_list)
+    app.router.add_get("/dashboard/api/logs/{request_id}", handle_logs_detail)
+
+    # Storage stats
+    app.router.add_get("/dashboard/api/storage", handle_storage_stats)
 
     app.on_startup.append(on_startup)
     app.on_shutdown.append(on_shutdown)

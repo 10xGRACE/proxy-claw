@@ -17,12 +17,13 @@ class RequestEntry:
     ms: float
     bytes: int
     error: str | None = None
+    request_id: str = ""
 
     def to_dict(self) -> dict:
         d = {
             "ts": self.ts, "method": self.method, "path": self.path,
             "client": self.client, "status": self.status,
-            "ms": self.ms, "bytes": self.bytes,
+            "ms": self.ms, "bytes": self.bytes, "request_id": self.request_id,
         }
         if self.error:
             d["error"] = self.error

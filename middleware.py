@@ -90,19 +90,35 @@ def rate_limit_middleware(rate: float = 2.0, burst: int = 10):
     return mw
 
 
-# ── Auth (shared secret) ───────────────────────────────────
+# ── Auth (shared secret + MinIO API keys) ─────────────────
 
 
-def auth_middleware(secret: str | None):
+def auth_middleware(secret: str | None, storage=None):
     @web.middleware
     async def mw(request: web.Request, handler):
-        if secret is None or is_open_path(request.path):
+        if is_open_path(request.path):
             return await handler(request)
 
         key = request.headers.get("x-api-key", "")
         bearer = request.headers.get("authorization", "")
 
-        if key == secret or bearer == f"Bearer {secret}":
+        # Check shared secret first
+        if secret:
+            if key == secret or bearer == f"Bearer {secret}":
+                return await handler(request)
+
+        # Check MinIO-stored API keys
+        if storage and storage.available:
+            api_key = key or (bearer.removeprefix("Bearer ").strip() if bearer else "")
+            if api_key:
+                key_data = storage.validate_api_key(api_key)
+                if key_data:
+                    # Attach key info to request for logging
+                    request["api_key_name"] = key_data.get("name", "unknown")
+                    return await handler(request)
+
+        # If no secret configured and no storage, auth is disabled
+        if secret is None and (storage is None or not storage.available):
             return await handler(request)
 
         return web.json_response({"error": "unauthorized"}, status=401)

@@ -8,6 +8,7 @@
   :root {
     --bg: #0d1117;
     --surface: #161b22;
+    --surface2: #1c2129;
     --border: #30363d;
     --text: #e6edf3;
     --text2: #8b949e;
@@ -23,54 +24,68 @@
     background: var(--bg);
     color: var(--text);
     line-height: 1.5;
-    padding: 20px;
-    max-width: 1200px;
-    margin: 0 auto;
+    min-height: 100vh;
   }
 
-  /* Header */
-  .header {
+  /* Layout */
+  .app { display: flex; min-height: 100vh; }
+  .sidebar {
+    width: 220px;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    padding: 20px 0;
+    flex-shrink: 0;
     display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 24px;
-    padding-bottom: 16px;
+    flex-direction: column;
+  }
+  .sidebar-brand {
+    padding: 0 16px 20px;
     border-bottom: 1px solid var(--border);
+    margin-bottom: 8px;
   }
-  .header h1 {
-    font-size: 20px;
-    font-weight: 600;
+  .sidebar-brand h1 { font-size: 16px; font-weight: 600; }
+  .sidebar-brand .sub { font-size: 11px; color: var(--text2); margin-top: 2px; }
+  .nav-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 16px; margin: 2px 8px;
+    border-radius: 6px; cursor: pointer;
+    font-size: 14px; color: var(--text2);
+    transition: background 0.15s, color 0.15s;
+    border: none; background: none; width: calc(100% - 16px); text-align: left;
   }
-  .status {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 14px;
-    color: var(--text2);
+  .nav-item:hover { background: var(--surface2); color: var(--text); }
+  .nav-item.active { background: rgba(88,166,255,0.1); color: var(--accent); }
+  .nav-icon { font-size: 16px; width: 20px; text-align: center; }
+  .sidebar-footer {
+    margin-top: auto; padding: 12px 16px;
+    border-top: 1px solid var(--border);
+    font-size: 11px; color: var(--text2);
   }
-  .status-dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: var(--red);
+  .main { flex: 1; padding: 24px; overflow-y: auto; max-height: 100vh; }
+
+  /* Connection status */
+  .conn-bar {
+    display: flex; align-items: center; gap: 8px;
+    padding: 0 16px; margin-bottom: 12px;
   }
-  .status-dot.online { background: var(--green); }
-  .btn-reset {
-    background: transparent;
-    border: 1px solid var(--border);
-    color: var(--text2);
-    padding: 4px 12px;
-    border-radius: var(--radius);
-    font-size: 12px;
-    cursor: pointer;
-    transition: border-color 0.2s, color 0.2s;
+  .conn-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--red); flex-shrink: 0;
   }
-  .btn-reset:hover { border-color: var(--red); color: var(--red); }
+  .conn-dot.online { background: var(--green); }
+  .conn-text { font-size: 11px; color: var(--text2); }
+
+  /* Header */
+  .page-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 20px;
+  }
+  .page-title { font-size: 20px; font-weight: 600; }
 
   /* Cards */
   .cards {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
     gap: 12px;
     margin-bottom: 24px;
   }
@@ -81,22 +96,15 @@
     padding: 16px;
   }
   .card-label {
-    font-size: 12px;
-    color: var(--text2);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
+    font-size: 11px; color: var(--text2);
+    text-transform: uppercase; letter-spacing: 0.5px;
     margin-bottom: 4px;
   }
   .card-value {
-    font-size: 24px;
-    font-weight: 600;
+    font-size: 22px; font-weight: 600;
     font-variant-numeric: tabular-nums;
   }
-  .card-sub {
-    font-size: 12px;
-    color: var(--text2);
-    margin-top: 2px;
-  }
+  .card-sub { font-size: 11px; color: var(--text2); margin-top: 2px; }
   .card-value.green { color: var(--green); }
   .card-value.red { color: var(--red); }
   .card-value.amber { color: var(--amber); }
@@ -109,151 +117,436 @@
     margin-bottom: 24px;
     overflow: hidden;
   }
-  .section-title {
-    font-size: 14px;
-    font-weight: 600;
+  .section-header {
+    display: flex; align-items: center; justify-content: space-between;
     padding: 12px 16px;
     border-bottom: 1px solid var(--border);
-    color: var(--text2);
   }
+  .section-title { font-size: 14px; font-weight: 600; color: var(--text2); }
 
   /* Table */
-  table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 13px;
-    font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
-  }
+  table { width: 100%; border-collapse: collapse; font-size: 13px;
+    font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace; }
   th {
-    text-align: left;
-    padding: 8px 12px;
-    font-weight: 500;
-    color: var(--text2);
-    font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    border-bottom: 1px solid var(--border);
-    position: sticky;
-    top: 0;
-    background: var(--surface);
+    text-align: left; padding: 8px 12px; font-weight: 500;
+    color: var(--text2); font-size: 11px; text-transform: uppercase;
+    letter-spacing: 0.5px; border-bottom: 1px solid var(--border);
+    position: sticky; top: 0; background: var(--surface);
   }
-  td {
-    padding: 6px 12px;
-    border-bottom: 1px solid var(--border);
-    white-space: nowrap;
-  }
+  td { padding: 6px 12px; border-bottom: 1px solid var(--border); white-space: nowrap; }
   tr:last-child td { border-bottom: none; }
-  .log-wrap {
-    max-height: 400px;
-    overflow-y: auto;
-  }
+  tr:hover td { background: var(--surface2); }
+  .log-wrap { max-height: 400px; overflow-y: auto; }
 
-  /* Status badges */
+  /* Badges */
   .badge {
-    display: inline-block;
-    padding: 1px 8px;
-    border-radius: 12px;
-    font-size: 12px;
-    font-weight: 500;
+    display: inline-block; padding: 1px 8px;
+    border-radius: 12px; font-size: 12px; font-weight: 500;
   }
   .badge.s2 { background: rgba(63,185,80,0.15); color: var(--green); }
   .badge.s4 { background: rgba(210,153,34,0.15); color: var(--amber); }
   .badge.s5 { background: rgba(248,81,73,0.15); color: var(--red); }
+  .badge.active { background: rgba(63,185,80,0.15); color: var(--green); }
+  .badge.inactive { background: rgba(248,81,73,0.15); color: var(--red); }
 
-  /* Empty state */
-  .empty {
-    padding: 32px;
-    text-align: center;
-    color: var(--text2);
-    font-size: 14px;
+  /* Buttons */
+  .btn {
+    padding: 6px 14px; border-radius: 6px; font-size: 13px;
+    cursor: pointer; border: 1px solid var(--border);
+    background: transparent; color: var(--text2);
+    transition: all 0.15s;
   }
+  .btn:hover { border-color: var(--accent); color: var(--accent); }
+  .btn-primary {
+    background: var(--accent); color: #fff; border-color: var(--accent);
+  }
+  .btn-primary:hover { background: #4090e0; }
+  .btn-danger { border-color: var(--red); color: var(--red); }
+  .btn-danger:hover { background: rgba(248,81,73,0.1); }
+  .btn-sm { padding: 3px 10px; font-size: 12px; }
+  .btn-group { display: flex; gap: 6px; }
+
+  /* Forms */
+  .input {
+    background: var(--bg); border: 1px solid var(--border);
+    color: var(--text); padding: 8px 12px; border-radius: 6px;
+    font-size: 14px; outline: none; width: 100%;
+  }
+  .input:focus { border-color: var(--accent); }
+  .form-row { display: flex; gap: 10px; align-items: center; margin-bottom: 12px; }
+  .form-label { font-size: 13px; color: var(--text2); margin-bottom: 4px; }
+
+  /* Modal */
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.6);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 100;
+  }
+  .modal-overlay.hidden { display: none; }
+  .modal {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 24px; width: 500px; max-width: 90vw;
+    max-height: 80vh; overflow-y: auto;
+  }
+  .modal h2 { font-size: 18px; margin-bottom: 16px; }
+  .modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 20px; }
+
+  /* Detail panel */
+  .detail-panel {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 20px; margin-bottom: 24px;
+  }
+  .detail-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid var(--border);
+  }
+  .detail-meta {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 12px; margin-bottom: 16px;
+  }
+  .detail-meta-item .label { font-size: 11px; color: var(--text2); text-transform: uppercase; }
+  .detail-meta-item .value { font-size: 14px; font-weight: 500; }
+  .code-block {
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: 6px; padding: 12px; margin-top: 8px;
+    font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+    font-size: 12px; overflow-x: auto; white-space: pre-wrap;
+    word-break: break-all; max-height: 400px; overflow-y: auto;
+  }
+  .tab-row { display: flex; gap: 0; border-bottom: 1px solid var(--border); margin-bottom: 12px; }
+  .tab-btn {
+    padding: 8px 16px; background: none; border: none; border-bottom: 2px solid transparent;
+    color: var(--text2); cursor: pointer; font-size: 13px;
+  }
+  .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+  /* Key reveal */
+  .key-reveal {
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: 6px; padding: 12px; margin-top: 12px;
+    font-family: monospace; font-size: 13px; word-break: break-all;
+  }
+  .key-reveal .warn { color: var(--amber); font-size: 12px; margin-top: 8px; }
+
+  /* Storage stats */
+  .storage-bar {
+    background: var(--bg); border-radius: 4px; height: 8px;
+    margin-top: 4px; overflow: hidden;
+  }
+  .storage-fill { height: 100%; background: var(--accent); border-radius: 4px; }
+
+  /* Empty */
+  .empty { padding: 32px; text-align: center; color: var(--text2); font-size: 14px; }
+
+  /* Clickable row */
+  tr.clickable { cursor: pointer; }
+  tr.clickable:hover td { background: rgba(88,166,255,0.05); }
 
   /* Scrollbar */
   ::-webkit-scrollbar { width: 6px; }
   ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    .sidebar { width: 56px; }
+    .sidebar-brand h1, .sidebar-brand .sub, .nav-label, .sidebar-footer span { display: none; }
+    .nav-item { justify-content: center; padding: 10px; }
+    .main { padding: 16px; }
+  }
 </style>
 </head>
 <body>
 
-<div class="header">
-  <h1>Claude Code Proxy</h1>
-  <div class="status">
-    <button class="btn-reset" id="resetBtn" onclick="resetStats()">Clear Logs</button>
-    <div class="status-dot" id="statusDot"></div>
-    <span id="statusText">Connecting…</span>
+<div class="app">
+  <!-- Sidebar -->
+  <nav class="sidebar">
+    <div class="sidebar-brand">
+      <h1>Proxy Claw</h1>
+      <div class="sub">Claude Code Proxy</div>
+    </div>
+    <div class="conn-bar">
+      <div class="conn-dot" id="connDot"></div>
+      <span class="conn-text" id="connText">Connecting…</span>
+    </div>
+    <button class="nav-item active" data-tab="overview" onclick="switchTab('overview')">
+      <span class="nav-icon">&#9632;</span> <span class="nav-label">Dashboard</span>
+    </button>
+    <button class="nav-item" data-tab="logs" onclick="switchTab('logs')">
+      <span class="nav-icon">&#9776;</span> <span class="nav-label">Request Logs</span>
+    </button>
+    <button class="nav-item" data-tab="keys" onclick="switchTab('keys')">
+      <span class="nav-icon">&#9919;</span> <span class="nav-label">API Keys</span>
+    </button>
+    <button class="nav-item" data-tab="storage" onclick="switchTab('storage')">
+      <span class="nav-icon">&#9744;</span> <span class="nav-label">Storage</span>
+    </button>
+    <div class="sidebar-footer">
+      <span>proxy-claw</span>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <div class="main">
+
+    <!-- ═══════════════ OVERVIEW TAB ═══════════════ -->
+    <div id="tab-overview" class="tab-content">
+      <div class="page-header">
+        <span class="page-title">Dashboard</span>
+        <button class="btn" onclick="resetStats()">Clear Stats</button>
+      </div>
+
+      <div class="cards">
+        <div class="card">
+          <div class="card-label">Uptime</div>
+          <div class="card-value" id="uptime">—</div>
+        </div>
+        <div class="card">
+          <div class="card-label">Requests</div>
+          <div class="card-value" id="totalReqs">0</div>
+          <div class="card-sub" id="totalBytes">0 B</div>
+        </div>
+        <div class="card">
+          <div class="card-label">Active Streams</div>
+          <div class="card-value" id="activeStreams">0</div>
+        </div>
+        <div class="card">
+          <div class="card-label">Error Rate</div>
+          <div class="card-value" id="errorRate">0%</div>
+          <div class="card-sub" id="errorCount">0 failed</div>
+        </div>
+        <div class="card">
+          <div class="card-label">Token Status</div>
+          <div class="card-value" id="tokenStatus">—</div>
+          <div class="card-sub" id="tokenExpiry">—</div>
+        </div>
+        <div class="card">
+          <div class="card-label">Storage</div>
+          <div class="card-value" id="storageStatus">—</div>
+          <div class="card-sub" id="storageSub">—</div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-header">
+          <span class="section-title">Recent Requests</span>
+        </div>
+        <div class="log-wrap" id="logWrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Time</th><th>Method</th><th>Path</th>
+                <th>Client</th><th>Status</th><th>Duration</th><th>Size</th>
+              </tr>
+            </thead>
+            <tbody id="logBody"></tbody>
+          </table>
+          <div class="empty" id="logEmpty">No requests yet</div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-header">
+          <span class="section-title">Connected Clients</span>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>IP Address</th><th>Requests</th><th>Data</th>
+              <th>First Seen</th><th>Last Seen</th>
+            </tr>
+          </thead>
+          <tbody id="clientsBody"></tbody>
+        </table>
+        <div class="empty" id="clientsEmpty">No clients yet</div>
+      </div>
+    </div>
+
+    <!-- ═══════════════ LOGS TAB ═══════════════ -->
+    <div id="tab-logs" class="tab-content" style="display:none">
+      <div class="page-header">
+        <span class="page-title">Request Logs</span>
+        <div class="form-row" style="margin-bottom:0">
+          <input type="date" class="input" id="logDate" style="width:160px"
+                 onchange="loadStoredLogs()">
+          <button class="btn" onclick="loadStoredLogs()">Refresh</button>
+        </div>
+      </div>
+
+      <!-- Detail View -->
+      <div id="logDetail" style="display:none">
+        <div class="detail-panel">
+          <div class="detail-header">
+            <span style="font-size:16px;font-weight:600" id="detailTitle">Request Detail</span>
+            <button class="btn btn-sm" onclick="closeDetail()">&#x2715; Close</button>
+          </div>
+          <div class="detail-meta" id="detailMeta"></div>
+          <div class="tab-row">
+            <button class="tab-btn active" onclick="showDetailTab(this,'detailReq')">Request</button>
+            <button class="tab-btn" onclick="showDetailTab(this,'detailResp')">Response</button>
+            <button class="tab-btn" onclick="showDetailTab(this,'detailHeaders')">Headers</button>
+          </div>
+          <div id="detailReq">
+            <div class="form-label">Request Body</div>
+            <div class="code-block" id="detailReqBody">—</div>
+          </div>
+          <div id="detailResp" style="display:none">
+            <div class="form-label">Response Body</div>
+            <div class="code-block" id="detailRespBody">—</div>
+          </div>
+          <div id="detailHeaders" style="display:none">
+            <div class="form-label">Request Headers</div>
+            <div class="code-block" id="detailReqHeaders">—</div>
+            <div class="form-label" style="margin-top:12px">Response Headers</div>
+            <div class="code-block" id="detailRespHeaders">—</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Log Table -->
+      <div class="section" id="logListSection">
+        <div class="section-header">
+          <span class="section-title">Stored Requests</span>
+          <span class="section-title" id="logCount" style="font-weight:400">—</span>
+        </div>
+        <div style="max-height:600px;overflow-y:auto">
+          <table>
+            <thead>
+              <tr>
+                <th>Time</th><th>Method</th><th>Path</th><th>Client</th>
+                <th>Status</th><th>Duration</th><th>Req Size</th><th>Resp Size</th>
+              </tr>
+            </thead>
+            <tbody id="storedLogBody"></tbody>
+          </table>
+          <div class="empty" id="storedLogEmpty">No stored logs. Connect MinIO to enable request storage.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════ KEYS TAB ═══════════════ -->
+    <div id="tab-keys" class="tab-content" style="display:none">
+      <div class="page-header">
+        <span class="page-title">API Keys</span>
+        <button class="btn btn-primary" onclick="showCreateKey()">+ Create Key</button>
+      </div>
+
+      <!-- Newly created key reveal -->
+      <div id="newKeyReveal" style="display:none">
+        <div class="key-reveal">
+          <div style="font-weight:600;margin-bottom:4px">New API Key Created</div>
+          <div id="newKeyValue" style="color:var(--green);font-size:14px;word-break:break-all"></div>
+          <div class="warn">Copy this key now — it won't be shown again in full.</div>
+          <div style="margin-top:8px">
+            <button class="btn btn-sm" onclick="copyNewKey()">Copy to Clipboard</button>
+            <button class="btn btn-sm" onclick="hideNewKey()">Dismiss</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-header">
+          <span class="section-title">Managed Keys</span>
+          <button class="btn btn-sm" onclick="loadKeys()">Refresh</button>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Name</th><th>Key</th><th>Status</th>
+              <th>Created</th><th>Last Used</th><th>Usage</th><th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="keysBody"></tbody>
+        </table>
+        <div class="empty" id="keysEmpty">No API keys yet. Create one to get started.</div>
+      </div>
+
+      <div class="section">
+        <div class="section-header">
+          <span class="section-title">Usage Guide</span>
+        </div>
+        <div style="padding:16px;font-size:13px;color:var(--text2);line-height:1.8">
+          <p>Use API keys to authenticate proxy requests from Claude Code clients:</p>
+          <div class="code-block" style="margin:8px 0">export ANTHROPIC_BASE_URL="http://&lt;proxy-host&gt;:9191"
+export ANTHROPIC_API_KEY="pck_..."
+claude</div>
+          <p style="margin-top:8px">Keys created here are stored in MinIO and validated on each request.
+          You can disable or delete keys at any time from this dashboard.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════ STORAGE TAB ═══════════════ -->
+    <div id="tab-storage" class="tab-content" style="display:none">
+      <div class="page-header">
+        <span class="page-title">Storage</span>
+        <button class="btn" onclick="loadStorageStats()">Refresh</button>
+      </div>
+
+      <div class="cards" id="storageCards">
+        <div class="card">
+          <div class="card-label">Status</div>
+          <div class="card-value" id="storAvail">—</div>
+        </div>
+      </div>
+
+      <div id="storageBuckets"></div>
+
+      <div class="section">
+        <div class="section-header">
+          <span class="section-title">MinIO Connection</span>
+        </div>
+        <div style="padding:16px;font-size:13px;color:var(--text2);line-height:1.8">
+          <p>MinIO is configured via environment variables on the proxy container:</p>
+          <div class="code-block" style="margin:8px 0">MINIO_ENDPOINT=minio:9000
+MINIO_ACCESS_KEY=minioadmin
+MINIO_SECRET_KEY=minioadmin
+MINIO_SECURE=false</div>
+          <p style="margin-top:8px">MinIO Console is available at <strong>http://&lt;minio-host&gt;:9001</strong></p>
+          <p>Buckets used:</p>
+          <ul style="margin-left:20px;margin-top:4px">
+            <li><strong>proxy-logs</strong> — Request/response storage (organized by date)</li>
+            <li><strong>proxy-keys</strong> — API key management</li>
+            <li><strong>proxy-config</strong> — Configuration storage</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
   </div>
 </div>
 
-<div class="cards">
-  <div class="card">
-    <div class="card-label">Uptime</div>
-    <div class="card-value" id="uptime">—</div>
+<!-- Create Key Modal -->
+<div class="modal-overlay hidden" id="createKeyModal">
+  <div class="modal">
+    <h2>Create API Key</h2>
+    <div class="form-label">Key Name</div>
+    <input class="input" id="keyNameInput" placeholder="e.g. dev-laptop, ci-runner, team-shared">
+    <div class="modal-actions">
+      <button class="btn" onclick="hideCreateKey()">Cancel</button>
+      <button class="btn btn-primary" onclick="createKey()">Create Key</button>
+    </div>
   </div>
-  <div class="card">
-    <div class="card-label">Requests</div>
-    <div class="card-value" id="totalReqs">0</div>
-    <div class="card-sub" id="totalBytes">0 B</div>
-  </div>
-  <div class="card">
-    <div class="card-label">Active Streams</div>
-    <div class="card-value" id="activeStreams">0</div>
-  </div>
-  <div class="card">
-    <div class="card-label">Error Rate</div>
-    <div class="card-value" id="errorRate">0%</div>
-    <div class="card-sub" id="errorCount">0 failed</div>
-  </div>
-  <div class="card">
-    <div class="card-label">Token Status</div>
-    <div class="card-value" id="tokenStatus">—</div>
-    <div class="card-sub" id="tokenExpiry">—</div>
-  </div>
-</div>
-
-<div class="section">
-  <div class="section-title">Request Log</div>
-  <div class="log-wrap" id="logWrap">
-    <table>
-      <thead>
-        <tr>
-          <th>Time</th>
-          <th>Method</th>
-          <th>Path</th>
-          <th>Client</th>
-          <th>Status</th>
-          <th>Duration</th>
-          <th>Size</th>
-        </tr>
-      </thead>
-      <tbody id="logBody"></tbody>
-    </table>
-    <div class="empty" id="logEmpty">No requests yet</div>
-  </div>
-</div>
-
-<div class="section">
-  <div class="section-title">Clients</div>
-  <table>
-    <thead>
-      <tr>
-        <th>IP Address</th>
-        <th>Requests</th>
-        <th>Data</th>
-        <th>First Seen</th>
-        <th>Last Seen</th>
-      </tr>
-    </thead>
-    <tbody id="clientsBody"></tbody>
-  </table>
-  <div class="empty" id="clientsEmpty">No clients yet</div>
 </div>
 
 <script>
 (function() {
   const $ = id => document.getElementById(id);
 
-  // ── Formatters ────────────────────────────────────
+  // ── Tab Navigation ─────────────────────────────────
+
+  window.switchTab = function(tab) {
+    document.querySelectorAll('.tab-content').forEach(el => el.style.display = 'none');
+    document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+    $('tab-' + tab).style.display = '';
+    document.querySelector('[data-tab="' + tab + '"]').classList.add('active');
+
+    if (tab === 'logs') loadStoredLogs();
+    if (tab === 'keys') loadKeys();
+    if (tab === 'storage') loadStorageStats();
+  };
+
+  // ── Formatters ─────────────────────────────────────
 
   function fmtUptime(s) {
     if (s < 60) return s + 's';
@@ -271,8 +564,17 @@
   }
 
   function fmtTime(ts) {
+    if (typeof ts === 'string') {
+      const d = new Date(ts);
+      return d.toLocaleTimeString('en-GB', {hour12: false});
+    }
     const d = new Date(ts * 1000);
     return d.toLocaleTimeString('en-GB', {hour12: false});
+  }
+
+  function fmtDate(ts) {
+    if (typeof ts === 'string') return new Date(ts).toLocaleString();
+    return new Date(ts * 1000).toLocaleString();
   }
 
   function fmtAgo(ts) {
@@ -294,7 +596,11 @@
     return '<span class="badge ' + cls + '">' + code + '</span>';
   }
 
-  // ── Render ────────────────────────────────────────
+  function truncPath(p) {
+    return p.length > 40 ? p.substring(0, 37) + '…' : p;
+  }
+
+  // ── Overview Tab ───────────────────────────────────
 
   function renderStats(s) {
     $('uptime').textContent = fmtUptime(s.uptime);
@@ -321,9 +627,21 @@
       tSub.textContent = 'Needs refresh';
     }
 
+    // Storage card
+    if (s.storage && s.storage.available) {
+      $('storageStatus').textContent = 'Online';
+      $('storageStatus').className = 'card-value green';
+      let totalObj = 0;
+      Object.values(s.storage.buckets || {}).forEach(b => totalObj += b.objects);
+      $('storageSub').textContent = totalObj + ' objects';
+    } else {
+      $('storageStatus').textContent = 'Offline';
+      $('storageStatus').className = 'card-value red';
+      $('storageSub').textContent = 'MinIO not connected';
+    }
+
     renderClients(s.clients);
 
-    // Render initial log entries
     if (s.log && s.log.length > 0) {
       $('logEmpty').style.display = 'none';
       s.log.forEach(e => addLogRow(e, false));
@@ -334,6 +652,10 @@
     $('logEmpty').style.display = 'none';
     const body = $('logBody');
     const tr = document.createElement('tr');
+    if (e.request_id) {
+      tr.className = 'clickable';
+      tr.onclick = function() { switchTab('logs'); viewRequestDetail(e.request_id); };
+    }
     tr.innerHTML =
       '<td>' + fmtTime(e.ts) + '</td>' +
       '<td>' + e.method + '</td>' +
@@ -343,77 +665,47 @@
       '<td>' + fmtDuration(e.ms) + '</td>' +
       '<td>' + fmtBytes(e.bytes) + '</td>';
 
-    if (prepend && body.firstChild) {
-      body.insertBefore(tr, body.firstChild);
-    } else {
-      body.appendChild(tr);
-    }
+    if (prepend && body.firstChild) body.insertBefore(tr, body.firstChild);
+    else body.appendChild(tr);
 
-    // Keep max 50 rows
-    while (body.children.length > 50) {
-      body.removeChild(body.lastChild);
-    }
-
-    // Auto-scroll to top on new entry
-    if (prepend) {
-      $('logWrap').scrollTop = 0;
-    }
-  }
-
-  function truncPath(p) {
-    return p.length > 40 ? p.substring(0, 37) + '…' : p;
+    while (body.children.length > 50) body.removeChild(body.lastChild);
+    if (prepend) $('logWrap').scrollTop = 0;
   }
 
   function renderClients(clients) {
     const body = $('clientsBody');
     const empty = $('clientsEmpty');
     const keys = Object.keys(clients || {});
-    if (keys.length === 0) {
-      empty.style.display = '';
-      body.innerHTML = '';
-      return;
-    }
+    if (keys.length === 0) { empty.style.display = ''; body.innerHTML = ''; return; }
     empty.style.display = 'none';
-    // Sort by request count desc
     keys.sort((a, b) => clients[b].reqs - clients[a].reqs);
     body.innerHTML = keys.map(ip => {
       const c = clients[ip];
-      return '<tr>' +
-        '<td>' + ip + '</td>' +
-        '<td>' + c.reqs + '</td>' +
-        '<td>' + fmtBytes(c.bytes) + '</td>' +
-        '<td>' + fmtAgo(c.first) + '</td>' +
-        '<td>' + fmtAgo(c.last) + '</td>' +
-        '</tr>';
+      return '<tr><td>' + ip + '</td><td>' + c.reqs + '</td><td>' + fmtBytes(c.bytes) +
+        '</td><td>' + fmtAgo(c.first) + '</td><td>' + fmtAgo(c.last) + '</td></tr>';
     }).join('');
   }
 
-  // ── SSE ───────────────────────────────────────────
+  // ── SSE ─────────────────────────────────────────────
 
   let reconnectAttempt = 0;
 
   function connect() {
     const es = new EventSource('/dashboard/events');
 
-    es.addEventListener('stats', function(e) {
-      renderStats(JSON.parse(e.data));
-    });
-
-    es.addEventListener('request', function(e) {
-      addLogRow(JSON.parse(e.data), true);
-    });
+    es.addEventListener('stats', function(e) { renderStats(JSON.parse(e.data)); });
+    es.addEventListener('request', function(e) { addLogRow(JSON.parse(e.data), true); });
 
     es.onopen = function() {
       reconnectAttempt = 0;
-      $('statusDot').classList.add('online');
-      $('statusText').textContent = 'Connected';
+      $('connDot').classList.add('online');
+      $('connText').textContent = 'Connected';
     };
 
     es.onerror = function() {
-      $('statusDot').classList.remove('online');
-      $('statusText').textContent = 'Reconnecting…';
+      $('connDot').classList.remove('online');
+      $('connText').textContent = 'Reconnecting…';
       es.close();
-      // Exponential backoff: 1s, 2s, 4s, 8s, max 30s
       const delay = Math.min(30000, 1000 * Math.pow(2, reconnectAttempt));
       reconnectAttempt++;
       setTimeout(connect, delay);
@@ -421,28 +713,248 @@
   }
 
   window.resetStats = function() {
-    fetch('/dashboard/reset', {method: 'POST'})
-      .then(function() {
-        $('logBody').innerHTML = '';
-        $('logEmpty').style.display = '';
-        $('clientsBody').innerHTML = '';
-        $('clientsEmpty').style.display = '';
-      })
-      .catch(function() {});
+    fetch('/dashboard/reset', {method: 'POST'}).then(function() {
+      $('logBody').innerHTML = '';
+      $('logEmpty').style.display = '';
+      $('clientsBody').innerHTML = '';
+      $('clientsEmpty').style.display = '';
+    }).catch(function() {});
   };
 
   connect();
 
-  // Refresh relative times every 30s
   setInterval(function() {
-    fetch('/dashboard/stats')
-      .then(r => r.json())
-      .then(s => {
-        renderClients(s.clients);
-        $('uptime').textContent = fmtUptime(s.uptime);
-      })
-      .catch(() => {});
+    fetch('/dashboard/stats').then(r => r.json()).then(s => {
+      renderClients(s.clients);
+      $('uptime').textContent = fmtUptime(s.uptime);
+    }).catch(() => {});
   }, 30000);
+
+  // ── Request Logs Tab ────────────────────────────────
+
+  // Set default date to today
+  const today = new Date().toISOString().split('T')[0];
+  $('logDate').value = today;
+
+  window.loadStoredLogs = function() {
+    const dateVal = $('logDate').value;
+    const datePath = dateVal ? dateVal.replace(/-/g, '/') : null;
+    const url = datePath ? '/dashboard/api/logs?date=' + datePath : '/dashboard/api/logs';
+
+    fetch(url).then(r => r.json()).then(data => {
+      const body = $('storedLogBody');
+      const empty = $('storedLogEmpty');
+      const logs = data.logs || [];
+
+      $('logCount').textContent = logs.length + ' requests';
+
+      if (logs.length === 0) {
+        empty.style.display = '';
+        body.innerHTML = '';
+        return;
+      }
+      empty.style.display = 'none';
+      body.innerHTML = logs.map(l => {
+        return '<tr class="clickable" onclick="viewRequestDetail(\'' + l.id + '\')">' +
+          '<td>' + fmtTime(l.timestamp) + '</td>' +
+          '<td>' + l.method + '</td>' +
+          '<td>' + truncPath(l.path) + '</td>' +
+          '<td>' + l.client_ip + '</td>' +
+          '<td>' + statusBadge(l.status) + '</td>' +
+          '<td>' + fmtDuration(l.duration_ms) + '</td>' +
+          '<td>' + fmtBytes(l.request_size) + '</td>' +
+          '<td>' + fmtBytes(l.response_size) + '</td>' +
+          '</tr>';
+      }).join('');
+    }).catch(e => {
+      $('storedLogEmpty').style.display = '';
+      $('storedLogEmpty').textContent = 'Failed to load logs: ' + e.message;
+    });
+  };
+
+  window.viewRequestDetail = function(requestId) {
+    fetch('/dashboard/api/logs/' + requestId).then(r => r.json()).then(data => {
+      if (data.error) { alert('Not found: ' + data.error); return; }
+
+      $('logDetail').style.display = '';
+      $('detailTitle').textContent = data.method + ' ' + data.path;
+
+      $('detailMeta').innerHTML =
+        '<div class="detail-meta-item"><div class="label">Request ID</div><div class="value">' + data.id + '</div></div>' +
+        '<div class="detail-meta-item"><div class="label">Timestamp</div><div class="value">' + fmtDate(data.timestamp) + '</div></div>' +
+        '<div class="detail-meta-item"><div class="label">Client IP</div><div class="value">' + data.client_ip + '</div></div>' +
+        '<div class="detail-meta-item"><div class="label">Status</div><div class="value">' + statusBadge(data.response.status) + '</div></div>' +
+        '<div class="detail-meta-item"><div class="label">Duration</div><div class="value">' + fmtDuration(data.duration_ms) + '</div></div>' +
+        (data.error ? '<div class="detail-meta-item"><div class="label">Error</div><div class="value" style="color:var(--red)">' + data.error + '</div></div>' : '');
+
+      // Try to pretty-print JSON bodies
+      $('detailReqBody').textContent = tryPrettyJson(data.request.body);
+      $('detailRespBody').textContent = tryPrettyJson(data.response.body);
+      $('detailReqHeaders').textContent = JSON.stringify(data.request.headers, null, 2);
+      $('detailRespHeaders').textContent = JSON.stringify(data.response.headers, null, 2);
+
+      // Reset tabs
+      showDetailTab(document.querySelector('#logDetail .tab-btn'), 'detailReq');
+
+      // Scroll to detail
+      $('logDetail').scrollIntoView({behavior: 'smooth'});
+    }).catch(e => alert('Error loading detail: ' + e.message));
+  };
+
+  window.closeDetail = function() {
+    $('logDetail').style.display = 'none';
+  };
+
+  window.showDetailTab = function(btn, tabId) {
+    btn.parentElement.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    ['detailReq', 'detailResp', 'detailHeaders'].forEach(id => {
+      $(id).style.display = id === tabId ? '' : 'none';
+    });
+  };
+
+  function tryPrettyJson(str) {
+    if (!str) return '(empty)';
+    try { return JSON.stringify(JSON.parse(str), null, 2); }
+    catch (e) { return str; }
+  }
+
+  // ── API Keys Tab ────────────────────────────────────
+
+  window.loadKeys = function() {
+    fetch('/dashboard/api/keys').then(r => r.json()).then(data => {
+      const body = $('keysBody');
+      const empty = $('keysEmpty');
+      const keys = data.keys || [];
+
+      if (keys.length === 0) {
+        empty.style.display = '';
+        body.innerHTML = '';
+        return;
+      }
+      empty.style.display = 'none';
+      body.innerHTML = keys.map(k => {
+        const statusCls = k.active ? 'active' : 'inactive';
+        const statusText = k.active ? 'Active' : 'Disabled';
+        const toggleText = k.active ? 'Disable' : 'Enable';
+        return '<tr>' +
+          '<td style="font-weight:500">' + esc(k.name) + '</td>' +
+          '<td style="color:var(--text2)">' + esc(k.key_masked || '…') + '</td>' +
+          '<td><span class="badge ' + statusCls + '">' + statusText + '</span></td>' +
+          '<td>' + fmtDate(k.created_at) + '</td>' +
+          '<td>' + (k.last_used ? fmtDate(k.last_used) : 'Never') + '</td>' +
+          '<td>' + (k.usage_count || 0) + '</td>' +
+          '<td><div class="btn-group">' +
+            '<button class="btn btn-sm" onclick="toggleKey(\'' + k.id + '\',' + !k.active + ')">' + toggleText + '</button>' +
+            '<button class="btn btn-sm btn-danger" onclick="deleteKey(\'' + k.id + '\',\'' + esc(k.name) + '\')">Delete</button>' +
+          '</div></td></tr>';
+      }).join('');
+    }).catch(e => {
+      $('keysEmpty').textContent = 'Failed to load keys: ' + e.message;
+      $('keysEmpty').style.display = '';
+    });
+  };
+
+  window.showCreateKey = function() {
+    $('createKeyModal').classList.remove('hidden');
+    $('keyNameInput').value = '';
+    $('keyNameInput').focus();
+  };
+
+  window.hideCreateKey = function() {
+    $('createKeyModal').classList.add('hidden');
+  };
+
+  let lastCreatedKey = '';
+
+  window.createKey = function() {
+    const name = $('keyNameInput').value.trim();
+    if (!name) { $('keyNameInput').focus(); return; }
+
+    fetch('/dashboard/api/keys', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({name: name})
+    }).then(r => r.json()).then(data => {
+      if (data.error) { alert('Error: ' + data.error); return; }
+      hideCreateKey();
+      // Show the key
+      lastCreatedKey = data.key.key;
+      $('newKeyValue').textContent = lastCreatedKey;
+      $('newKeyReveal').style.display = '';
+      $('newKeyReveal').scrollIntoView({behavior: 'smooth'});
+      loadKeys();
+    }).catch(e => alert('Error: ' + e.message));
+  };
+
+  window.copyNewKey = function() {
+    navigator.clipboard.writeText(lastCreatedKey).then(() => {
+      const btn = event.target;
+      btn.textContent = 'Copied!';
+      setTimeout(() => btn.textContent = 'Copy to Clipboard', 2000);
+    });
+  };
+
+  window.hideNewKey = function() {
+    $('newKeyReveal').style.display = 'none';
+  };
+
+  window.toggleKey = function(id, active) {
+    fetch('/dashboard/api/keys/' + id, {
+      method: 'PUT',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({active: active})
+    }).then(() => loadKeys()).catch(e => alert('Error: ' + e.message));
+  };
+
+  window.deleteKey = function(id, name) {
+    if (!confirm('Delete key "' + name + '"? This cannot be undone.')) return;
+    fetch('/dashboard/api/keys/' + id, {method: 'DELETE'})
+      .then(() => loadKeys()).catch(e => alert('Error: ' + e.message));
+  };
+
+  // Handle enter key in modal
+  $('keyNameInput').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') createKey();
+    if (e.key === 'Escape') hideCreateKey();
+  });
+
+  // ── Storage Tab ─────────────────────────────────────
+
+  window.loadStorageStats = function() {
+    fetch('/dashboard/api/storage').then(r => r.json()).then(data => {
+      if (data.error) {
+        $('storAvail').textContent = 'Offline';
+        $('storAvail').className = 'card-value red';
+        $('storageBuckets').innerHTML = '';
+        return;
+      }
+      $('storAvail').textContent = data.available ? 'Online' : 'Offline';
+      $('storAvail').className = 'card-value ' + (data.available ? 'green' : 'red');
+
+      const buckets = data.buckets || {};
+      let html = '';
+      for (const [name, info] of Object.entries(buckets)) {
+        html += '<div class="section" style="margin-bottom:12px">' +
+          '<div class="section-header"><span class="section-title">' + esc(name) + '</span>' +
+          '<span class="section-title" style="font-weight:400">' + info.objects + ' objects / ' + fmtBytes(info.size) + '</span></div>' +
+          '</div>';
+      }
+      $('storageBuckets').innerHTML = html;
+    }).catch(e => {
+      $('storAvail').textContent = 'Error';
+      $('storAvail').className = 'card-value red';
+    });
+  };
+
+  // ── Utils ───────────────────────────────────────────
+
+  function esc(s) {
+    const d = document.createElement('div');
+    d.textContent = s;
+    return d.innerHTML;
+  }
+
 })();
 </script>
 

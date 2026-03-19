@@ -4,6 +4,7 @@ import asyncio
 import json
 import logging
 import time
+import uuid
 from pathlib import Path
 
 import aiohttp
@@ -129,10 +130,12 @@ class TokenManager:
 class ProxyHandler:
     """Forwards requests to api.anthropic.com with OAuth injection."""
 
-    def __init__(self, session: aiohttp.ClientSession, token_mgr: TokenManager, stats: StatsCollector):
+    def __init__(self, session: aiohttp.ClientSession, token_mgr: TokenManager,
+                 stats: StatsCollector, storage=None):
         self._session = session
         self._tokens = token_mgr
         self._stats = stats
+        self._storage = storage
 
     async def handle(self, request: web.Request) -> web.StreamResponse:
         t0 = time.time()
@@ -148,15 +151,19 @@ class ProxyHandler:
     async def _do_proxy(
         self, request: web.Request, client_ip: str, t0: float, *, retry_on_401: bool
     ) -> web.StreamResponse:
+        request_id = str(uuid.uuid4())[:12]
+
         try:
             token = await self._tokens.get_token()
 
             # Build upstream headers — strip auth + hop-by-hop
             headers = {}
+            req_headers_log = {}
             skip = HOP_BY_HOP | {"host", "x-api-key", "authorization", "content-length", "accept-encoding"}
             for k, v in request.headers.items():
                 if k.lower() not in skip:
                     headers[k] = v
+                    req_headers_log[k] = v
             headers["Authorization"] = f"Bearer {token}"
             headers["Host"] = "api.anthropic.com"
 
@@ -193,19 +200,25 @@ class ProxyHandler:
 
                 # Build response — strip hop-by-hop headers
                 resp_headers = {}
+                resp_headers_log = {}
                 for k, v in upstream.headers.items():
                     if k.lower() not in HOP_BY_HOP and k.lower() != "content-length":
                         resp_headers[k] = v
+                        resp_headers_log[k] = v
 
                 response = web.StreamResponse(status=upstream.status, headers=resp_headers)
                 await response.prepare(request)
 
                 sent = 0
+                response_chunks = []
                 try:
                     async for chunk in upstream.content.iter_any():
                         await response.write(chunk)
                         await response.drain()  # backpressure
                         sent += len(chunk)
+                        # Collect response chunks for storage (cap at 512KB)
+                        if sum(len(c) for c in response_chunks) < 512 * 1024:
+                            response_chunks.append(chunk)
                 except (ConnectionResetError, aiohttp.ClientConnectionResetError):
                     pass  # client disconnected mid-stream
 
@@ -217,24 +230,35 @@ class ProxyHandler:
                 ms = (time.time() - t0) * 1000
                 entry = RequestEntry(
                     ts=time.time(), method=request.method, path=request.path,
-                    client=client_ip, status=upstream.status, ms=round(ms, 1), bytes=sent,
+                    client=client_ip, status=upstream.status, ms=round(ms, 1),
+                    bytes=sent, request_id=request_id,
                 )
                 self._stats.record(entry)
-                log.info("%s %s → %d (%.0fms, %s)", request.method, request.path,
-                         upstream.status, ms, _fmt_bytes(sent))
+                log.info("%s %s → %d (%.0fms, %s) [%s]", request.method, request.path,
+                         upstream.status, ms, _fmt_bytes(sent), request_id)
                 await self._stats.broadcast("request", entry.to_dict())
+
+                # Store in MinIO (fire-and-forget in background)
+                if self._storage and self._storage.available:
+                    resp_body = b"".join(response_chunks)
+                    _store_in_background(
+                        self._storage, request_id, request.method, request.path,
+                        client_ip, req_headers_log, body, upstream.status,
+                        resp_headers_log, resp_body, ms,
+                    )
+
                 return response
 
         except aiohttp.ClientConnectorError as e:
-            return self._error(request, client_ip, t0, 502, f"upstream unreachable: {e}")
+            return self._error(request, client_ip, t0, 502, f"upstream unreachable: {e}", request_id)
         except asyncio.TimeoutError:
-            return self._error(request, client_ip, t0, 504, "upstream timeout")
+            return self._error(request, client_ip, t0, 504, "upstream timeout", request_id)
         except aiohttp.ClientPayloadError as e:
-            return self._error(request, client_ip, t0, 502, f"upstream closed mid-stream: {e}")
+            return self._error(request, client_ip, t0, 502, f"upstream closed mid-stream: {e}", request_id)
         except aiohttp.ServerDisconnectedError:
-            return self._error(request, client_ip, t0, 502, "upstream disconnected")
+            return self._error(request, client_ip, t0, 502, "upstream disconnected", request_id)
         except RuntimeError as e:
-            return self._error(request, client_ip, t0, 502, str(e))
+            return self._error(request, client_ip, t0, 502, str(e), request_id)
         except asyncio.CancelledError:
             # Client disconnected — let it propagate after cleanup logging
             ms = (time.time() - t0) * 1000
@@ -242,17 +266,39 @@ class ProxyHandler:
             raise
 
     def _error(self, request: web.Request, client_ip: str, t0: float,
-               status: int, message: str) -> web.Response:
+               status: int, message: str, request_id: str = "") -> web.Response:
         ms = (time.time() - t0) * 1000
         entry = RequestEntry(
             ts=time.time(), method=request.method, path=request.path,
-            client=client_ip, status=status, ms=round(ms, 1), bytes=0, error=message,
+            client=client_ip, status=status, ms=round(ms, 1), bytes=0,
+            error=message, request_id=request_id,
         )
         self._stats.record(entry)
         log.error("%s %s → %d: %s (%.0fms)", request.method, request.path, status, message, ms)
         # Fire-and-forget broadcast — we're returning a response, not streaming
         asyncio.ensure_future(self._stats.broadcast("request", entry.to_dict()))
         return web.json_response({"error": message}, status=status)
+
+
+def _store_in_background(storage, request_id, method, path, client_ip,
+                         req_headers, req_body, resp_status, resp_headers,
+                         resp_body, duration_ms):
+    """Fire-and-forget storage of request/response."""
+    try:
+        storage.store_request_log(
+            request_id=request_id,
+            method=method,
+            path=path,
+            client_ip=client_ip,
+            request_headers=req_headers,
+            request_body=req_body,
+            response_status=resp_status,
+            response_headers=resp_headers,
+            response_body=resp_body,
+            duration_ms=duration_ms,
+        )
+    except Exception as e:
+        log.error("background storage failed for %s: %s", request_id, e)
 
 
 def _ensure_billing_header(body: bytes) -> bytes:

@@ -1,1 +1,2 @@
 aiohttp>=3.9
+minio>=7.2
