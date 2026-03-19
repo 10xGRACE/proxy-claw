@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 200">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0d1117"/>
+      <stop offset="100%" style="stop-color:#161b22"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#58a6ff"/>
+      <stop offset="100%" style="stop-color:#3fb950"/>
+    </linearGradient>
+  </defs>
+  <rect width="900" height="200" rx="12" fill="url(#bg)"/>
+  <rect x="0" y="196" width="900" height="4" rx="2" fill="url(#accent)"/>
+  <!-- Claw icon -->
+  <g transform="translate(60, 55)">
+    <path d="M20 0 C20 0 5 25 15 50 C20 60 25 65 30 70 L40 70 C35 60 32 50 35 40 C38 30 45 20 45 10 C45 0 35 -5 20 0Z" fill="#58a6ff" opacity="0.9"/>
+    <path d="M45 5 C45 5 35 30 42 52 C45 60 50 65 55 70 L65 70 C60 60 58 50 60 40 C62 30 68 22 65 12 C62 2 52 -2 45 5Z" fill="#58a6ff" opacity="0.7"/>
+    <path d="M68 10 C68 10 58 32 63 52 C66 60 70 65 75 70 L85 70 C80 60 78 52 80 42 C82 32 86 24 83 15 C80 6 72 4 68 10Z" fill="#58a6ff" opacity="0.5"/>
+    <rect x="10" y="70" width="80" height="20" rx="4" fill="#30363d"/>
+    <rect x="10" y="70" width="80" height="20" rx="4" fill="url(#accent)" opacity="0.3"/>
+  </g>
+  <!-- Text -->
+  <text x="180" y="105" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="48" font-weight="700" fill="#e6edf3">Proxy Claw</text>
+  <text x="180" y="140" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" fill="#8b949e">Share one Claude Code session across every device on your network</text>
+  <!-- Right side decorative elements -->
+  <g transform="translate(700, 40)" opacity="0.15">
+    <rect x="0" y="0" width="60" height="12" rx="3" fill="#58a6ff"/>
+    <rect x="10" y="20" width="80" height="12" rx="3" fill="#58a6ff"/>
+    <rect x="5" y="40" width="50" height="12" rx="3" fill="#3fb950"/>
+    <rect x="15" y="60" width="70" height="12" rx="3" fill="#58a6ff"/>
+    <rect x="0" y="80" width="90" height="12" rx="3" fill="#58a6ff"/>
+    <rect x="20" y="100" width="40" height="12" rx="3" fill="#3fb950"/>
+  </g>
+</svg>
