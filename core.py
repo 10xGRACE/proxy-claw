@@ -1,6 +1,7 @@
 """TokenManager and ProxyHandler — the core proxy logic."""
 
 import asyncio
+import gzip
 import json
 import logging
 import time
@@ -80,12 +81,16 @@ class TokenManager:
                     },
                     timeout=aiohttp.ClientTimeout(total=30),
                 ) as r:
+                    raw_body = await r.read()
+                    if r.headers.get("Content-Encoding") == "gzip":
+                        raw_body = gzip.decompress(raw_body)
+
                     if r.status != 200:
-                        body = await r.text()
+                        body = raw_body.decode("utf-8", errors="replace")
                         log.error("token refresh failed (%d): %s", r.status, body)
                         raise RuntimeError(f"token refresh returned {r.status}")
 
-                    d = await r.json()
+                    d = json.loads(raw_body)
                     self._creds["accessToken"] = d["access_token"]
                     if "refresh_token" in d:
                         self._creds["refreshToken"] = d["refresh_token"]

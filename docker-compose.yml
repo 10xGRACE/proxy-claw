@@ -16,6 +16,30 @@ services:
       timeout: 5s
       retries: 5
     restart: unless-stopped
+    networks:
+      - proxy-net
+
+  proxy-claw:
+    image: ghcr.io/10xgrace/proxy-claw:latest
+    ports:
+      - "9191:9191"
+    environment:
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin}
+    volumes:
+      - ~/.claude:/root/.claude:ro
+    command: ["--port", "9191"]
+    depends_on:
+      minio:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - proxy-net
+
+networks:
+  proxy-net:
+    driver: bridge
 
 volumes:
   minio_data:
