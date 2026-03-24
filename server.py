@@ -169,6 +169,16 @@ async def handle_logs_detail(request: web.Request) -> web.Response:
     return web.json_response(data)
 
 
+async def handle_analytics(request: web.Request) -> web.Response:
+    storage: StorageClient = request.app["storage"]
+    if not storage.available:
+        return web.json_response({"error": "storage not available"}, status=503)
+
+    date = request.query.get("date")
+    data = storage.get_analytics(date=date)
+    return web.json_response(data)
+
+
 async def handle_storage_stats(request: web.Request) -> web.Response:
     storage: StorageClient = request.app["storage"]
     if not storage.available:
@@ -243,6 +253,9 @@ def build_app(port: int, secret: str | None, max_body: int) -> web.Application:
     # Request log viewer
     app.router.add_get("/dashboard/api/logs", handle_logs_list)
     app.router.add_get("/dashboard/api/logs/{request_id}", handle_logs_detail)
+
+    # Analytics
+    app.router.add_get("/dashboard/api/analytics", handle_analytics)
 
     # Storage stats
     app.router.add_get("/dashboard/api/storage", handle_storage_stats)

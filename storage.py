@@ -161,6 +161,9 @@ class StorageClient:
                     data = json.loads(resp.read().decode())
                     resp.close()
                     resp.release_conn()
+                    # Extract model and token usage from bodies
+                    model, input_tokens, output_tokens = _extract_api_info(data)
+
                     # Return summary (without full bodies for listing)
                     results.append({
                         "id": data["id"],
@@ -173,6 +176,9 @@ class StorageClient:
                         "request_size": data["request"]["size"],
                         "response_size": data["response"]["size"],
                         "error": data.get("error"),
+                        "model": model,
+                        "input_tokens": input_tokens,
+                        "output_tokens": output_tokens,
                     })
                 except Exception:
                     continue
@@ -326,6 +332,72 @@ class StorageClient:
             log.error("error deleting API key %s: %s", key_id, e)
             return False
 
+    def get_analytics(self, date: str | None = None) -> dict:
+        """Aggregate usage analytics from stored logs for a given date."""
+        logs = self.list_request_logs(limit=10000, date=date)
+
+        by_model: dict[str, dict] = {}
+        by_path: dict[str, dict] = {}
+        by_client: dict[str, dict] = {}
+        by_status: dict[str, dict] = {}
+        total_input = 0
+        total_output = 0
+        total_duration = 0.0
+        total_requests = len(logs)
+
+        for entry in logs:
+            model = entry.get("model") or "unknown"
+            path = entry.get("path", "unknown")
+            client = entry.get("client_ip", "unknown")
+            status = str(entry.get("status", 0))
+            inp = entry.get("input_tokens", 0)
+            out = entry.get("output_tokens", 0)
+            dur = entry.get("duration_ms", 0)
+
+            total_input += inp
+            total_output += out
+            total_duration += dur
+
+            # By model
+            if model not in by_model:
+                by_model[model] = {"requests": 0, "input_tokens": 0, "output_tokens": 0, "total_ms": 0}
+            by_model[model]["requests"] += 1
+            by_model[model]["input_tokens"] += inp
+            by_model[model]["output_tokens"] += out
+            by_model[model]["total_ms"] += dur
+
+            # By path
+            if path not in by_path:
+                by_path[path] = {"requests": 0, "input_tokens": 0, "output_tokens": 0}
+            by_path[path]["requests"] += 1
+            by_path[path]["input_tokens"] += inp
+            by_path[path]["output_tokens"] += out
+
+            # By client
+            if client not in by_client:
+                by_client[client] = {"requests": 0, "input_tokens": 0, "output_tokens": 0}
+            by_client[client]["requests"] += 1
+            by_client[client]["input_tokens"] += inp
+            by_client[client]["output_tokens"] += out
+
+            # By status
+            if status not in by_status:
+                by_status[status] = {"requests": 0}
+            by_status[status]["requests"] += 1
+
+        return {
+            "date": date or datetime.utcnow().strftime("%Y/%m/%d"),
+            "total_requests": total_requests,
+            "total_input_tokens": total_input,
+            "total_output_tokens": total_output,
+            "total_tokens": total_input + total_output,
+            "avg_duration_ms": round(total_duration / total_requests, 1) if total_requests else 0,
+            "by_model": by_model,
+            "by_path": by_path,
+            "by_client": by_client,
+            "by_status": by_status,
+        }
+
     def get_storage_stats(self) -> dict:
         """Get storage usage statistics."""
         if not self._client:
@@ -352,6 +424,55 @@ class StorageClient:
                 "size": total_size,
             }
         return stats
+
+
+def _extract_api_info(data: dict) -> tuple:
+    """Extract model name and token usage from a stored request/response log."""
+    model = None
+    input_tokens = 0
+    output_tokens = 0
+
+    # Model from request body
+    req_body = data.get("request", {}).get("body", "")
+    if req_body:
+        try:
+            parsed = json.loads(req_body) if isinstance(req_body, str) else req_body
+            model = parsed.get("model")
+        except (json.JSONDecodeError, TypeError, ValueError):
+            pass
+
+    # Token usage from response body — handle both regular JSON and SSE streams
+    resp_body = data.get("response", {}).get("body", "")
+    if resp_body and isinstance(resp_body, str):
+        # Try direct JSON parse first (non-streaming response)
+        try:
+            parsed = json.loads(resp_body)
+            usage = parsed.get("usage", {})
+            input_tokens = usage.get("input_tokens", 0)
+            output_tokens = usage.get("output_tokens", 0)
+            if not model and parsed.get("model"):
+                model = parsed["model"]
+        except (json.JSONDecodeError, TypeError, ValueError):
+            # SSE streaming response — scan for usage in event chunks
+            import re
+            for line in resp_body.split("\n"):
+                if not line.startswith("data: "):
+                    continue
+                chunk_str = line[6:].strip()
+                if not chunk_str or chunk_str == "[DONE]":
+                    continue
+                try:
+                    chunk = json.loads(chunk_str)
+                    if not model and chunk.get("model"):
+                        model = chunk["model"]
+                    usage = chunk.get("usage")
+                    if usage:
+                        input_tokens = usage.get("input_tokens", input_tokens)
+                        output_tokens = usage.get("output_tokens", output_tokens)
+                except (json.JSONDecodeError, TypeError, ValueError):
+                    continue
+
+    return model, input_tokens, output_tokens
 
 
 def _safe_decode(data: bytes) -> str:

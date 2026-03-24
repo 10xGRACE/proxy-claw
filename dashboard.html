@@ -275,6 +275,9 @@
     <button class="nav-item" data-tab="logs" onclick="switchTab('logs')">
       <span class="nav-icon">&#9776;</span> <span class="nav-label">Request Logs</span>
     </button>
+    <button class="nav-item" data-tab="analytics" onclick="switchTab('analytics')">
+      <span class="nav-icon">&#9733;</span> <span class="nav-label">Analytics</span>
+    </button>
     <button class="nav-item" data-tab="keys" onclick="switchTab('keys')">
       <span class="nav-icon">&#9919;</span> <span class="nav-label">API Keys</span>
     </button>
@@ -369,6 +372,17 @@
         <div class="form-row" style="margin-bottom:0">
           <input type="date" class="input" id="logDate" style="width:160px"
                  onchange="loadStoredLogs()">
+          <select class="input" id="filterModel" style="width:160px" onchange="applyLogFilters()">
+            <option value="">All Models</option>
+          </select>
+          <select class="input" id="filterStatus" style="width:120px" onchange="applyLogFilters()">
+            <option value="">All Status</option>
+            <option value="2xx">2xx</option>
+            <option value="4xx">4xx</option>
+            <option value="5xx">5xx</option>
+          </select>
+          <input class="input" id="filterClient" style="width:140px" placeholder="Client IP"
+                 oninput="applyLogFilters()">
           <button class="btn" onclick="loadStoredLogs()">Refresh</button>
         </div>
       </div>
@@ -413,14 +427,108 @@
           <table>
             <thead>
               <tr>
-                <th>Time</th><th>Method</th><th>Path</th><th>Client</th>
-                <th>Status</th><th>Duration</th><th>Req Size</th><th>Resp Size</th>
+                <th>Time</th><th>Method</th><th>Path</th><th>Model</th><th>Client</th>
+                <th>Status</th><th>Duration</th><th>In Tokens</th><th>Out Tokens</th>
               </tr>
             </thead>
             <tbody id="storedLogBody"></tbody>
           </table>
           <div class="empty" id="storedLogEmpty">No stored logs. Connect MinIO to enable request storage.</div>
         </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════ ANALYTICS TAB ═══════════════ -->
+    <div id="tab-analytics" class="tab-content" style="display:none">
+      <div class="page-header">
+        <span class="page-title">Analytics</span>
+        <div class="form-row" style="margin-bottom:0">
+          <input type="date" class="input" id="analyticsDate" style="width:160px"
+                 onchange="loadAnalytics()">
+          <button class="btn" onclick="loadAnalytics()">Refresh</button>
+        </div>
+      </div>
+
+      <!-- Summary cards -->
+      <div class="cards" id="analyticsCards">
+        <div class="card">
+          <div class="card-label">Total Requests</div>
+          <div class="card-value" id="anTotalReqs">0</div>
+        </div>
+        <div class="card">
+          <div class="card-label">Input Tokens</div>
+          <div class="card-value" id="anInputTokens">0</div>
+        </div>
+        <div class="card">
+          <div class="card-label">Output Tokens</div>
+          <div class="card-value" id="anOutputTokens">0</div>
+        </div>
+        <div class="card">
+          <div class="card-label">Total Tokens</div>
+          <div class="card-value" id="anTotalTokens">0</div>
+        </div>
+        <div class="card">
+          <div class="card-label">Avg Duration</div>
+          <div class="card-value" id="anAvgDuration">—</div>
+        </div>
+      </div>
+
+      <!-- By Model -->
+      <div class="section">
+        <div class="section-header">
+          <span class="section-title">Usage by Model</span>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Model</th><th>Requests</th><th>Input Tokens</th>
+              <th>Output Tokens</th><th>Total Tokens</th><th>Avg Duration</th>
+            </tr>
+          </thead>
+          <tbody id="anModelBody"></tbody>
+        </table>
+        <div class="empty" id="anModelEmpty">No data</div>
+      </div>
+
+      <!-- By Client -->
+      <div class="section">
+        <div class="section-header">
+          <span class="section-title">Usage by Client</span>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Client IP</th><th>Requests</th><th>Input Tokens</th><th>Output Tokens</th>
+            </tr>
+          </thead>
+          <tbody id="anClientBody"></tbody>
+        </table>
+        <div class="empty" id="anClientEmpty">No data</div>
+      </div>
+
+      <!-- By Path -->
+      <div class="section">
+        <div class="section-header">
+          <span class="section-title">Usage by Endpoint</span>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Path</th><th>Requests</th><th>Input Tokens</th><th>Output Tokens</th>
+            </tr>
+          </thead>
+          <tbody id="anPathBody"></tbody>
+        </table>
+        <div class="empty" id="anPathEmpty">No data</div>
+      </div>
+
+      <!-- By Status -->
+      <div class="section">
+        <div class="section-header">
+          <span class="section-title">Status Breakdown</span>
+        </div>
+        <div style="display:flex;gap:12px;padding:16px;flex-wrap:wrap" id="anStatusCards"></div>
+        <div class="empty" id="anStatusEmpty">No data</div>
       </div>
     </div>
 
@@ -531,6 +639,7 @@ claude</div>
     document.querySelector('[data-tab="' + tab + '"]').classList.add('active');
 
     if (tab === 'logs') loadStoredLogs();
+    if (tab === 'analytics') loadAnalytics();
     if (tab === 'keys') loadKeys();
     if (tab === 'storage') loadStorageStats();
   };
@@ -578,6 +687,13 @@ claude</div>
   function fmtDuration(ms) {
     if (ms < 1000) return Math.round(ms) + 'ms';
     return (ms/1000).toFixed(1) + 's';
+  }
+
+  function fmtNum(n) {
+    if (!n) return '0';
+    if (n >= 1000000) return (n/1000000).toFixed(1) + 'M';
+    if (n >= 1000) return (n/1000).toFixed(1) + 'K';
+    return String(n);
   }
 
   function statusBadge(code) {
@@ -725,40 +841,78 @@ claude</div>
   const today = new Date().toISOString().split('T')[0];
   $('logDate').value = today;
 
+  let allStoredLogs = [];
+
   window.loadStoredLogs = function() {
     const dateVal = $('logDate').value;
     const datePath = dateVal ? dateVal.replace(/-/g, '/') : null;
     const url = datePath ? '/dashboard/api/logs?date=' + datePath : '/dashboard/api/logs';
 
     fetch(url).then(r => r.json()).then(data => {
-      const body = $('storedLogBody');
-      const empty = $('storedLogEmpty');
-      const logs = data.logs || [];
+      allStoredLogs = data.logs || [];
 
-      $('logCount').textContent = logs.length + ' requests';
+      // Populate model filter dropdown
+      const models = new Set();
+      allStoredLogs.forEach(l => { if (l.model) models.add(l.model); });
+      const sel = $('filterModel');
+      const prev = sel.value;
+      sel.innerHTML = '<option value="">All Models</option>';
+      Array.from(models).sort().forEach(m => {
+        sel.innerHTML += '<option value="' + esc(m) + '">' + esc(m) + '</option>';
+      });
+      sel.value = prev;
 
-      if (logs.length === 0) {
-        empty.style.display = '';
-        body.innerHTML = '';
-        return;
-      }
-      empty.style.display = 'none';
-      body.innerHTML = logs.map(l => {
-        return '<tr class="clickable" onclick="viewRequestDetail(\'' + l.id + '\')">' +
-          '<td>' + fmtTime(l.timestamp) + '</td>' +
-          '<td>' + l.method + '</td>' +
-          '<td>' + truncPath(l.path) + '</td>' +
-          '<td>' + l.client_ip + '</td>' +
-          '<td>' + statusBadge(l.status) + '</td>' +
-          '<td>' + fmtDuration(l.duration_ms) + '</td>' +
-          '<td>' + fmtBytes(l.request_size) + '</td>' +
-          '<td>' + fmtBytes(l.response_size) + '</td>' +
-          '</tr>';
-      }).join('');
+      applyLogFilters();
     }).catch(e => {
       $('storedLogEmpty').style.display = '';
       $('storedLogEmpty').textContent = 'Failed to load logs: ' + e.message;
     });
+  };
+
+  window.applyLogFilters = function() {
+    const modelFilter = $('filterModel').value;
+    const statusFilter = $('filterStatus').value;
+    const clientFilter = ($('filterClient').value || '').trim().toLowerCase();
+
+    const filtered = allStoredLogs.filter(l => {
+      if (modelFilter && (l.model || '') !== modelFilter) return false;
+      if (statusFilter) {
+        const s = String(l.status);
+        if (statusFilter === '2xx' && s[0] !== '2') return false;
+        if (statusFilter === '4xx' && s[0] !== '4') return false;
+        if (statusFilter === '5xx' && s[0] !== '5') return false;
+      }
+      if (clientFilter && !(l.client_ip || '').toLowerCase().includes(clientFilter)) return false;
+      return true;
+    });
+
+    const body = $('storedLogBody');
+    const empty = $('storedLogEmpty');
+    $('logCount').textContent = filtered.length + ' of ' + allStoredLogs.length + ' requests';
+
+    if (filtered.length === 0) {
+      empty.style.display = '';
+      empty.textContent = allStoredLogs.length === 0
+        ? 'No stored logs. Connect MinIO to enable request storage.'
+        : 'No requests match the current filters.';
+      body.innerHTML = '';
+      return;
+    }
+    empty.style.display = 'none';
+    body.innerHTML = filtered.map(l => {
+      const modelShort = l.model ? l.model.replace('claude-', '').substring(0, 20) : '—';
+      return '<tr class="clickable" onclick="viewRequestDetail(\'' + l.id + '\')">' +
+        '<td>' + fmtTime(l.timestamp) + '</td>' +
+        '<td>' + l.method + '</td>' +
+        '<td>' + truncPath(l.path) + '</td>' +
+        '<td title="' + esc(l.model || '') + '">' + esc(modelShort) + '</td>' +
+        '<td>' + l.client_ip + '</td>' +
+        '<td>' + statusBadge(l.status) + '</td>' +
+        '<td>' + fmtDuration(l.duration_ms) + '</td>' +
+        '<td>' + fmtNum(l.input_tokens) + '</td>' +
+        '<td>' + fmtNum(l.output_tokens) + '</td>' +
+        '</tr>';
+    }).join('');
   };
 
   window.viewRequestDetail = function(requestId) {
@@ -951,6 +1105,104 @@ claude</div>
       $('storAvail').textContent = 'Error';
       $('storAvail').className = 'card-value red';
       $('storageConnectionInfo').textContent = 'Failed to fetch storage info.';
+    });
+  };
+
+  // ── Analytics Tab ──────────────────────────────────
+
+  $('analyticsDate').value = today;
+
+  window.loadAnalytics = function() {
+    const dateVal = $('analyticsDate').value;
+    const datePath = dateVal ? dateVal.replace(/-/g, '/') : null;
+    const url = datePath ? '/dashboard/api/analytics?date=' + datePath : '/dashboard/api/analytics';
+
+    fetch(url).then(r => r.json()).then(data => {
+      if (data.error) {
+        $('anTotalReqs').textContent = '—';
+        return;
+      }
+
+      $('anTotalReqs').textContent = fmtNum(data.total_requests);
+      $('anInputTokens').textContent = fmtNum(data.total_input_tokens);
+      $('anOutputTokens').textContent = fmtNum(data.total_output_tokens);
+      $('anTotalTokens').textContent = fmtNum(data.total_tokens);
+      $('anAvgDuration').textContent = fmtDuration(data.avg_duration_ms);
+
+      // By Model
+      const models = Object.entries(data.by_model || {});
+      if (models.length > 0) {
+        $('anModelEmpty').style.display = 'none';
+        models.sort((a, b) => b[1].requests - a[1].requests);
+        $('anModelBody').innerHTML = models.map(function(entry) {
+          var name = entry[0]; var m = entry[1];
+          var total = m.input_tokens + m.output_tokens;
+          var avg = m.requests > 0 ? m.total_ms / m.requests : 0;
+          return '<tr><td style="font-weight:500">' + esc(name) + '</td>' +
+            '<td>' + m.requests + '</td>' +
+            '<td>' + fmtNum(m.input_tokens) + '</td>' +
+            '<td>' + fmtNum(m.output_tokens) + '</td>' +
+            '<td style="font-weight:500">' + fmtNum(total) + '</td>' +
+            '<td>' + fmtDuration(avg) + '</td></tr>';
+        }).join('');
+      } else {
+        $('anModelEmpty').style.display = '';
+        $('anModelBody').innerHTML = '';
+      }
+
+      // By Client
+      const clients = Object.entries(data.by_client || {});
+      if (clients.length > 0) {
+        $('anClientEmpty').style.display = 'none';
+        clients.sort((a, b) => b[1].requests - a[1].requests);
+        $('anClientBody').innerHTML = clients.map(function(entry) {
+          var ip = entry[0]; var c = entry[1];
+          return '<tr><td>' + esc(ip) + '</td>' +
+            '<td>' + c.requests + '</td>' +
+            '<td>' + fmtNum(c.input_tokens) + '</td>' +
+            '<td>' + fmtNum(c.output_tokens) + '</td></tr>';
+        }).join('');
+      } else {
+        $('anClientEmpty').style.display = '';
+        $('anClientBody').innerHTML = '';
+      }
+
+      // By Path
+      const paths = Object.entries(data.by_path || {});
+      if (paths.length > 0) {
+        $('anPathEmpty').style.display = 'none';
+        paths.sort((a, b) => b[1].requests - a[1].requests);
+        $('anPathBody').innerHTML = paths.map(function(entry) {
+          var p = entry[0]; var v = entry[1];
+          return '<tr><td>' + esc(p) + '</td>' +
+            '<td>' + v.requests + '</td>' +
+            '<td>' + fmtNum(v.input_tokens) + '</td>' +
+            '<td>' + fmtNum(v.output_tokens) + '</td></tr>';
+        }).join('');
+      } else {
+        $('anPathEmpty').style.display = '';
+        $('anPathBody').innerHTML = '';
+      }
+
+      // By Status
+      const statuses = Object.entries(data.by_status || {});
+      if (statuses.length > 0) {
+        $('anStatusEmpty').style.display = 'none';
+        statuses.sort((a, b) => parseInt(a[0]) - parseInt(b[0]));
+        $('anStatusCards').innerHTML = statuses.map(function(entry) {
+          var code = entry[0]; var s = entry[1];
+          var cls = code[0] === '2' ? 'green' : code[0] === '4' ? 'amber' : 'red';
+          return '<div class="card" style="min-width:100px;flex:0 0 auto">' +
+            '<div class="card-label">Status ' + esc(code) + '</div>' +
+            '<div class="card-value ' + cls + '">' + s.requests + '</div>' +
+            '</div>';
+        }).join('');
+      } else {
+        $('anStatusEmpty').style.display = '';
+        $('anStatusCards').innerHTML = '';
+      }
+    }).catch(function(e) {
+      $('anTotalReqs').textContent = 'Error';
     });
   };
 
