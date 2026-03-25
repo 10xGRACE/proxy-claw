@@ -69,14 +69,14 @@ class TokenManager:
                 )
                 async with self._session.post(
                     TOKEN_URL,
-                    json={
+                    data={
                         "grant_type": "refresh_token",
                         "refresh_token": self._creds["refreshToken"],
                         "client_id": CLIENT_ID,
                         "scope": scope_str,
                     },
                     headers={
-                        "Content-Type": "application/json",
+                        "Content-Type": "application/x-www-form-urlencoded",
                         "User-Agent": "claude-cli/2.1.78",
                     },
                     timeout=aiohttp.ClientTimeout(total=30),
